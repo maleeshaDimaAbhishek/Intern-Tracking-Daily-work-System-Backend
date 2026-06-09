@@ -1,0 +1,27 @@
+.env
+__pycache__/
+*.pyc
+# Virtual environments
+venv/
+.venv/
+
+# Hidden directories
+.agents/
+.codex
+
+# Python cache and compiled files (already have some, but adding related ones)
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+
+# Logs
+*.log
