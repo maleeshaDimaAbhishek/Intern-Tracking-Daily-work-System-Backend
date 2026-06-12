@@ -25,6 +25,7 @@ class LeaveRequest(Base):
     __tablename__="leave_requests"
     id= Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id= Column(Integer, ForeignKey("users.id"), nullable=False)
+    supervisor_id= Column(Integer, ForeignKey("users.id"), nullable=True) # Assigned when supervisor approves
 
     leave_type= Column(String, nullable=False)
     status= Column(String, nullable=False, default="Pending")
@@ -36,10 +37,13 @@ class LeaveRequest(Base):
     leave_date=Column(Date, nullable=True)
     session= Column(String, nullable=True)
 
+    reference= Column(String, unique=True, default=generate_reference, nullable=False)
+
     created_at= Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at= Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", foreign_keys=[user_id])
+    supervisor = relationship("User", foreign_keys=[supervisor_id])
     approval=relationship("LeaveApproval", back_populates="leave_request", cascade="all, delete-orphan")
     medical_certificate=relationship("MedicalCertificate", back_populates="leave_request",uselist=False, cascade="all, delete-orphan")
     notifications=relationship("Notification", back_populates="leave_request", cascade="all, delete-orphan")
