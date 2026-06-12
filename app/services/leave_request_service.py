@@ -109,7 +109,7 @@ def list_leave_requests(db:Session,
           leaves=leave_request_repo.get_leave_requests_by_supervisor(db, user_id)
      else: #intern
           leaves=leave_request_repo.get_leave_requests_by_user(db, user_id)
-     return [_build_response(1) for 1 in leaves]
+     return [_build_response(leave) for leave in leaves]
 #cancel leave request
 def cancel_leave_request(db:Session,
                          leave_id:int,

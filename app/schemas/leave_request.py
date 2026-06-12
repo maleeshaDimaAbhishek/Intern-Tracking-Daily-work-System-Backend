@@ -97,7 +97,7 @@ class LeaveRequestResponse(BaseModel):
     medical_status: Optional[str] = None
     class Config:
         from_attributes = True
-class LeaveRequestSummery(BaseModel):
+class LeaveRequestSummary(BaseModel):
     """
     Lighter version for list views — no nested approval details.
     """
