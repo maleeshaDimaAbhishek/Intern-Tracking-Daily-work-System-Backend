@@ -96,7 +96,7 @@ def get_user_projects(
     supervisor_id=auth_user.get("sub")
     if role=="supervisor" :
         user_service.is_supervisor_of_intern(db, supervisor_id, user_id)
-    return project_service.get_projects_by_user(db,user_id)    
+    return project_service.get_projects_by_user(db,user_id,role)    
 @router.delete("/{user_id}")
 def soft_delete_user(
     user_id:int,

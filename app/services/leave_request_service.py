@@ -43,7 +43,7 @@ def _build_response(leave:LeaveRequest)->dict:
           "status":leave.status,
           "reason":leave.reason,
           "emergency_contact":leave.emergency_contact,
-          "reference_number":leave.reference_number,
+          "reference":leave.reference,
           "start_date":leave.start_date,
           "end_date":leave.end_date,
           "leave_date":leave.leave_date,
@@ -51,11 +51,11 @@ def _build_response(leave:LeaveRequest)->dict:
           "created_at":leave.created_at,
           "updated_at":leave.updated_at,
           "user_id":leave.user_id,
-          "approvals":leave.approvals or [],
+          "approvals":leave.approval or [],
           "user_name":leave.user.name if leave.user else None,
           "user_email":leave.user.email if leave.user else None,
           "user_phone":leave.user.phone if leave.user else None,
-          "medical_status":leave.medical_status.status if leave.medical_status else None,
+          "medical_status":leave.status if leave.status else None,
      }
      return response
 def submit_leave_request(db:Session, user_id:int, schema:LeaveRequestCreate)->dict:
@@ -106,7 +106,7 @@ def list_leave_requests(db:Session,
      if role=="admin":
           leaves=leave_request_repo.get_all_leave_requests(db)
      elif role=="supervisor":
-          leaves=leave_request_repo.get_leave_requests_by_supervisor(db, user_id)
+          leaves=leave_request_repo.get_leave_requests_for_supervisor(db, user_id)
      else: #intern
           leaves=leave_request_repo.get_leave_requests_by_user(db, user_id)
      return [_build_response(leave) for leave in leaves]

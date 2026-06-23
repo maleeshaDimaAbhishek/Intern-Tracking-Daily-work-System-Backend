@@ -28,8 +28,8 @@ def get_all_projects(
 def get_my_projects(
     db:Session=Depends(get_db),
     user=Depends(get_current_user)):
-    user_id=int(user.get("sub"))
-    role=user.get("role")
+    user_id = int(user.get("sub"))
+    role    = user.get("role")
     return project_service.get_projects_by_user(db,user_id,role)
 @router.delete("/{project_id}")
 def delete_project(

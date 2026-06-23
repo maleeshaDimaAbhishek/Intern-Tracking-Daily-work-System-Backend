@@ -71,7 +71,7 @@ def _build_response(leave:LeaveRequest)->dict:
         "status": leave.status,
         "reason": leave.reason,
         "emergency_contact": leave.emergency_contact,
-        "reference_number": leave.reference,
+        "reference": leave.reference,
         "start_date": leave.start_date,
         "end_date": leave.end_date,
         "leave_date": leave.leave_date,
@@ -108,7 +108,7 @@ def decide_leave_request(
         "leave_request_id": leave_id,
         "supervisor_id":    supervisor_id,
         "decision":         schema.decision,
-        "comment":          schema.comment,
+        "comments":          schema.comments,
     })
 
     new_status=schema.decision
@@ -127,14 +127,14 @@ def decide_leave_request(
         previous_value   = {"status": old_status},
         new_value        = {
             "status":  new_status,
-            "comment": schema.comment,
+            "comments": schema.comments,
         },
     )
     if schema.decision == "Approved":
         title   = "Leave Request Approved ✅"
         message = (
             f"Your {leave.leave_type} request "
-            f"(Ref: {leave.reference_number}) has been approved"
+            f"(Ref: {leave.reference}) has been approved"
             + (f" by your supervisor." )
             + (
                 " Please submit your medical certificate within 14 days."
@@ -146,8 +146,8 @@ def decide_leave_request(
         title   = "Leave Request Rejected ❌"
         message = (
             f"Your {leave.leave_type} request "
-            f"(Ref: {leave.reference_number}) has been rejected."
-            + (f" Reason: {schema.comment}" if schema.comment else "")
+            f"(Ref: {leave.reference}) has been rejected."
+            + (f" Reason: {schema.comments}" if schema.comments else "")
         )
         notif_type = "leave_rejected"
     _create_notification(db, 
@@ -196,7 +196,7 @@ def get_pending_for_supervisor(
 #             employee_name   = leave.user.name,
 #             supervisor_name = leave.supervisor.name,
 #             leave           = leave,
-#             comment         = schema.comment,
+#             comments        = schema.comments,
 #         )
 # except Exception as e:
 #     # Never let email failure break the approval flow

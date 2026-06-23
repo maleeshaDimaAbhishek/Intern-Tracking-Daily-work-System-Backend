@@ -10,6 +10,7 @@ from app.api import leave_approval
 from app.api import notification
 from app.api import medical_certificate
 from app.api import audit_log                        # ← Step 8
+from app.api import leave_pdf
 
 # Import ALL models so SQLAlchemy creates tables
 from app.model import user_project
@@ -48,8 +49,9 @@ app.include_router(auth.router,               prefix="/auth",          tags=["Au
 app.include_router(user.router,               prefix="/users",         tags=["Users"])
 app.include_router(project.router,            prefix="/projects",      tags=["Projects"])
 app.include_router(daily_work.router,         prefix="/daily-work",    tags=["Tasks"])
-app.include_router(leave_request.router,      prefix="/leave",         tags=["Leave"])
 app.include_router(leave_approval.router,     prefix="/leave",         tags=["Leave Approval"])
+app.include_router(leave_request.router,      prefix="/leave",         tags=["Leave"])
 app.include_router(medical_certificate.router, prefix="/leave",        tags=["Medical"])
+app.include_router(leave_pdf.router,           prefix="/leave",         tags=["Leave PDF"])
 app.include_router(notification.router,       prefix="/notifications", tags=["Notifications"])
 app.include_router(audit_log.router,          prefix="/audit",         tags=["Audit"])

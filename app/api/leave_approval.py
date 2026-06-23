@@ -13,11 +13,37 @@ from app.db.database import get_db
 router = APIRouter()
 
 
+# ==========================================
+# 1. STATIC ROUTES FIRST
+# ==========================================
+
+# ──────────────────────────────────────────────────────────────
+# GET PENDING REQUESTS
+# Supervisor sees only what needs their action
+# ──────────────────────────────────────────────────────────────
+@router.get(
+    "/approval/pending",
+    response_model=list[LeaveRequestSummary],
+    summary="[Supervisor] Get all pending leave requests assigned to you",
+)
+def get_pending_requests(
+    db:           Session = Depends(get_db),
+    current_user  = Depends(get_current_admin_or_supervisor),
+):
+    supervisor_id = int(current_user.get("sub"))
+    return leave_approval_service.get_pending_for_supervisor(
+        db, supervisor_id
+    )
+
+
+# ==========================================
+# 2. DYNAMIC ROUTES LAST
+# ==========================================
+
 # ──────────────────────────────────────────────────────────────
 # APPROVE OR REJECT
 # Only supervisors (and admins) can hit this endpoint
 # ──────────────────────────────────────────────────────────────
-
 @router.post(
     "/{leave_id}/decide",
     response_model=LeaveRequestResponse,
@@ -32,24 +58,4 @@ def decide_leave_request(
     supervisor_id = int(current_user.get("sub"))
     return leave_approval_service.decide_leave_request(
         db, leave_id, supervisor_id, body
-    )
-
-
-# ──────────────────────────────────────────────────────────────
-# GET PENDING REQUESTS
-# Supervisor sees only what needs their action
-# ──────────────────────────────────────────────────────────────
-
-@router.get(
-    "/pending",
-    response_model=list[LeaveRequestSummary],
-    summary="[Supervisor] Get all pending leave requests assigned to you",
-)
-def get_pending_requests(
-    db:           Session = Depends(get_db),
-    current_user  = Depends(get_current_admin_or_supervisor),
-):
-    supervisor_id = int(current_user.get("sub"))
-    return leave_approval_service.get_pending_for_supervisor(
-        db, supervisor_id
     )

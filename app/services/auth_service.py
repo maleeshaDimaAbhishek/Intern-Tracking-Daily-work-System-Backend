@@ -13,5 +13,7 @@ def login_user(db:Session,email,password):
         "sub":str(user.id),
         "role":user.role,
         "email":user.email,
+        "name":user.name,
+        "phone":user.phone,
         })
     return {"access_token":token,"token_type":"bearer","is_first_login": user.is_first_login}

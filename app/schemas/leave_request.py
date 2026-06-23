@@ -9,6 +9,7 @@ class LeaveRequestCreate(BaseModel):
     reason:str = Field(..., min_length=10, max_length=1000)
     emergency_contact:str = Field(..., min_length=10, max_length=15)
     supervisor_id: int
+    
 
     #Date fields — only relevant ones will be filled
     start_date: Optional[date]= None #sick leave, personal leave
@@ -28,7 +29,7 @@ class LeaveRequestCreate(BaseModel):
         return value
     @field_validator('end_date')
     def validate_dates(cls, end_date, values):
-        start_date = values.get('start_date')
+        start_date = values.data.get('start_date')
         if start_date and end_date and end_date < start_date:
             raise ValueError("End date cannot be before start date")
         return end_date
@@ -45,7 +46,7 @@ class LeaveRequestCreate(BaseModel):
         }
 class LeaveRequestCancel(BaseModel):
     """Employee leave request cancellation schema."""
-    reason:Optional[str] = Field(None, min_length=10, max_length=700)
+    reason:Optional[str]
 class SupervisorBasic(BaseModel):
      """Minimal supervisor info embedded in leave response"""
      id:    int
@@ -74,7 +75,7 @@ class LeaveRequestResponse(BaseModel):
     status:str
     reason:str
     emergency_contact:str
-    reference_number:str
+    reference_number: str = Field(alias="reference")
 
     #Date fields — only relevant ones will be filled
     start_date: Optional[date]= None #sick leave, personal leave
@@ -105,7 +106,7 @@ class LeaveRequestSummary(BaseModel):
     leave_type:str
     status:str
     reason:str
-    reference_number:str
+    reference_number: str = Field(validation_alias='reference')
     created_at: datetime
 
     #Date fields — only relevant ones will be filled

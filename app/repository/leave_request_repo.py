@@ -44,7 +44,7 @@ def get_leave_requests_for_supervisor(db:Session, supervisor_id:int)->list[Leave
         db.query(LeaveRequest)
         .options(
             joinedload(LeaveRequest.user),
-            joinedload(LeaveRequest.approvals)
+            joinedload(LeaveRequest.approval)
                 .joinedload(LeaveApproval.supervisor),
             joinedload(LeaveRequest.medical_certificate),
         )
