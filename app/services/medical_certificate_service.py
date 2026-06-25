@@ -136,7 +136,7 @@ async def upload_medical_certificate(
         title            = "Medical Certificate Submitted",
         message          = (
             f"{leave.user.name} has uploaded their medical certificate "
-            f"for leave request {leave.reference_number}."
+            f"for leave request {leave.reference}."
         ),
     )
 
@@ -207,7 +207,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
         if not leave:
             continue
 
-        deadline      = cert.deadline
+        deadline      = _as_utc(cert.deadline)
         days_remaining = (deadline - now).days
 
         # ── OVERDUE — deadline passed ─────────────────────────
@@ -231,7 +231,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                 title            = "Medical Certificate Overdue ⚠️",
                 message          = (
                     f"Your medical certificate for leave "
-                    f"{leave.reference_number} is now overdue. "
+                    f"{leave.reference} is now overdue. "
                     f"Please contact HR immediately."
                 ),
             )
@@ -243,7 +243,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                         "leave_type":       leave.leave_type,
                         "start_date":       leave.start_date,
                         "end_date":         leave.end_date,
-                        "reference_number": leave.reference_number,
+                        "reference_number": leave.reference,
                     },
                 )
             except Exception as e:
@@ -267,7 +267,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                 title            = "⚠️ Final Reminder: Medical Certificate",
                 message          = (
                     f"Last chance! Your medical certificate for "
-                    f"{leave.reference_number} is due tomorrow."
+                    f"{leave.reference} is due tomorrow."
                 ),
             )
             try:
@@ -278,7 +278,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                         "leave_type":       leave.leave_type,
                         "start_date":       leave.start_date,
                         "end_date":         leave.end_date,
-                        "reference_number": leave.reference_number,
+                        "reference_number": leave.reference,
                     },
                     days_remaining   = days_remaining,
                     reminder_number  = 2,
@@ -303,7 +303,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                 title            = "Medical Certificate Reminder",
                 message          = (
                     f"Your medical certificate for "
-                    f"{leave.reference_number} is due in "
+                    f"{leave.reference} is due in "
                     f"{days_remaining} day(s)."
                 ),
             )
@@ -315,7 +315,7 @@ def run_medical_certificate_checks(db: Session) -> dict:
                         "leave_type":       leave.leave_type,
                         "start_date":       leave.start_date,
                         "end_date":         leave.end_date,
-                        "reference_number": leave.reference_number,
+                        "reference_number": leave.reference,
                     },
                     days_remaining   = days_remaining,
                     reminder_number  = 1,
@@ -334,20 +334,29 @@ def run_medical_certificate_checks(db: Session) -> dict:
 
 def _build_cert_response(cert: MedicalCertificate) -> dict:
     now           = datetime.now(timezone.utc)
-    days_remaining = max(0, (cert.deadline - now).days)
+    deadline      = _as_utc(cert.deadline)
+    days_remaining = max(0, (deadline - now).days)
 
     return {
         "id":               cert.id,
         "leave_request_id": cert.leave_request_id,
         "status":           cert.status,
         "file_path":        cert.file_path,
-        "submitted_at":     cert.submitted_at,
-        "deadline":         cert.deadline,
-        "reminder_1_sent":  cert.reminder_1_sent,
-        "reminder_2_sent":  cert.reminder_2_sent,
-        "created_at":       cert.created_at,
+        "submitted_at":     _as_utc(cert.submitted_at),
+        "deadline":         deadline,
+        "reminder_1_sent":  _as_utc(cert.reminder_1_sent),
+        "reminder_2_sent":  _as_utc(cert.reminder_2_sent),
+        "created_at":       _as_utc(cert.created_at),
         "days_remaining":   days_remaining,
     }
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
 
 
 def _write_audit_log(

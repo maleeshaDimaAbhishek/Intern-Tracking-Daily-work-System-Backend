@@ -1,6 +1,8 @@
 import io
+import os
 import qrcode
 from datetime import datetime, timezone
+from pathlib import Path
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -9,8 +11,34 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 )
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.utils import ImageReader
  
 from app.model.leave_request import LeaveRequest
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_LOGO_PATH = PROJECT_ROOT / "app" / "static" / "logo.png"
+
+
+def _resolve_logo_path()->Path|None:
+    configured_path = os.getenv("LEAVE_PDF_LOGO_PATH")
+    logo_path = Path(configured_path) if configured_path else DEFAULT_LOGO_PATH
+    if not logo_path.is_absolute():
+        logo_path = PROJECT_ROOT / logo_path
+    return logo_path if logo_path.exists() else None
+
+
+def _build_logo_image(max_width=34 * mm, max_height=18 * mm)->Image|None:
+    logo_path = _resolve_logo_path()
+    if not logo_path:
+        return None
+
+    try:
+        image_width, image_height = ImageReader(str(logo_path)).getSize()
+    except Exception:
+        return None
+
+    scale = min(max_width / image_width, max_height / image_height)
+    return Image(str(logo_path), width=image_width * scale, height=image_height * scale)
 
 def _generate_qr_code(verification_url:str)->io.BytesIO:
     """
@@ -47,7 +75,7 @@ def _get_leave_period_text(leave:LeaveRequest)->str:
     return "-"
 
 def generate_approval_letter_pdf(leave:LeaveRequest,
-                                 base_verification_url:str="https://empdiary.sltmobitel.lk/verify")->io.BytesIO:
+                                 base_verification_url:str="http://localhost:5173/verify")->io.BytesIO:
     """
     Builds the full Leave Approval Letter PDF in memory and
     returns it as a BytesIO buffer ready to stream to the client.
@@ -86,8 +114,26 @@ def generate_approval_letter_pdf(leave:LeaveRequest,
         alignment=TA_CENTER,
     )
     elements=[]
-    elements.append(Paragraph("Sri Lanka Telecom PLC", title_style))
-    elements.append(Paragraph("EmpDiary — Leave Approval Letter", subtitle_style))
+    header_text = [
+        Paragraph("Sri Lanka Telecom PLC", title_style),
+        Paragraph("EmpDiary — Leave Approval Letter", subtitle_style),
+    ]
+    logo_image = _build_logo_image()
+    if logo_image:
+        header_table = Table(
+            [[logo_image, header_text]],
+            colWidths=[42 * mm, 132 * mm],
+        )
+        header_table.setStyle(TableStyle([
+            ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING",   (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING",(0, 0), (-1, -1), 12),
+        ]))
+        elements.append(header_table)
+    else:
+        elements.extend(header_text)
  
     # ── Reference + Approval Date strip ────────────────────────
     approval = leave.approval[0] if leave.approval else None

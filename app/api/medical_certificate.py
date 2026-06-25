@@ -10,7 +10,7 @@ from app.db.database import get_db
 router = APIRouter()
 
 @router.post(
-    "/{leave_id}/medical",
+    "/{leave_id}/medical/",
     response_model=MedicalCertificateResponse,
     status_code=status.HTTP_200_OK,
     summary="Upload Medical Certificate for approved sick leave",

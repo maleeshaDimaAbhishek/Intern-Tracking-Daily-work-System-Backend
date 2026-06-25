@@ -55,7 +55,10 @@ def _build_response(leave:LeaveRequest)->dict:
           "user_name":leave.user.name if leave.user else None,
           "user_email":leave.user.email if leave.user else None,
           "user_phone":leave.user.phone if leave.user else None,
-          "medical_status":leave.status if leave.status else None,
+          "medical_status": (
+               leave.medical_certificate.status
+               if leave.medical_certificate else None
+          ),
      }
      return response
 def submit_leave_request(db:Session, user_id:int, schema:LeaveRequestCreate)->dict:

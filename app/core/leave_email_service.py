@@ -182,17 +182,17 @@ def send_leave_rejected_email(
     employee_name:   str,
     supervisor_name: str,
     leave: dict,
-    comment: str | None,
+    comments: str | None,
 ) -> None:
     subject = f"❌ Your {leave.get('leave_type')} Request Was Not Approved"
 
     comment_block = ""
-    if comment:
+    if comments:
         comment_block = f"""
         <div style="background:#fff5f5;border:1px solid #fed7d7;
                     border-radius:8px;padding:0.9rem 1rem;margin-top:1rem;">
           <p style="margin:0;color:#c53030;font-size:0.85rem;">
-            💬 <strong>Supervisor's Comment:</strong> {comment}
+            💬 <strong>Supervisor's Comment:</strong> {comments}
           </p>
         </div>
         """

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +13,7 @@ from app.api import notification
 from app.api import medical_certificate
 from app.api import audit_log                        # ← Step 8
 from app.api import leave_pdf
+from app.api import leave_verification
 
 # Import ALL models so SQLAlchemy creates tables
 from app.model import user_project
@@ -55,3 +58,9 @@ app.include_router(medical_certificate.router, prefix="/leave",        tags=["Me
 app.include_router(leave_pdf.router,           prefix="/leave",         tags=["Leave PDF"])
 app.include_router(notification.router,       prefix="/notifications", tags=["Notifications"])
 app.include_router(audit_log.router,          prefix="/audit",         tags=["Audit"])
+app.include_router(leave_verification.router,  prefix="/verify",        tags=["Public Verification"])
+ 
+# ── Debug-only routes — never enabled in production ────────────
+if os.getenv("ENVIRONMENT", "development") == "development":
+    from app.api import scheduler_debug
+    app.include_router(scheduler_debug.router, prefix="/debug", tags=["Debug (dev only)"])

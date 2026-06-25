@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
- 
+
 from app.repository import leave_request_repo, leave_approval_repo
 from app.schemas.leave_approval import LeaveApprovalCreate
 from app.model.leave_request import LeaveRequest
@@ -9,13 +9,14 @@ from app.model.audit_log import AuditLog
 from app.model.notification import Notification
 from app.model.medical_certificate import MedicalCertificate
 
+
 def _write_audit_log(
-        db:Session,
-        user_id:int,
-        leave_request_id:int,
-        action:str,
-        previous_value:dict | None,
-        new_value:dict | None,
+        db: Session,
+        user_id: int,
+        leave_request_id: int,
+        action: str,
+        previous_value: dict | None,
+        new_value: dict | None,
 ):
     """Writes an entry to the audit log for tracking changes to leave requests."""
     log_entry = AuditLog(
@@ -27,13 +28,15 @@ def _write_audit_log(
     )
     db.add(log_entry)
     db.commit()
+
+
 def _create_notification(
-        db:Session,
-        user_id:int,
-        leave_request_id:int,
-        notif_type:str,
-        title:str,
-        message:str,
+        db: Session,
+        user_id: int,
+        leave_request_id: int,
+        notif_type: str,
+        title: str,
+        message: str,
 ):
     """Creates a notification for a user regarding a leave request event."""
     notification = Notification(
@@ -46,26 +49,31 @@ def _create_notification(
     )
     db.add(notification)
     db.commit()
+
+
 def _create_medical_certificate(
-        db:Session,
-        leave:LeaveRequest
+        db: Session,
+        leave: LeaveRequest
 ):
-     """
+    """
     Auto-created when a Sick Leave is approved.
     Deadline = end_date + 14 days.
     """
-     deadline=datetime.combine(leave.end_date, datetime.min.time()).astimezone(timezone.utc) + timedelta(days=14)
-     cert=MedicalCertificate(
-          leave_request_id=leave.id,
-          status="Pending",
-          deadline=deadline,
-     )
-     db.add(cert)
-     db.commit()
-     db.refresh(cert)
-     return cert
-def _build_response(leave:LeaveRequest)->dict:
-    return{
+    deadline = datetime.combine(leave.end_date, datetime.min.time()).astimezone(timezone.utc) + timedelta(days=14)
+
+    cert = MedicalCertificate(
+        leave_request_id=leave.id,
+        status="Pending",
+        deadline=deadline,
+    )
+    db.add(cert)
+    db.commit()
+    db.refresh(cert)
+    return cert
+
+
+def _build_response(leave: LeaveRequest) -> dict:
+    return {
         "id": leave.id,
         "leave_type": leave.leave_type,
         "status": leave.status,
@@ -79,31 +87,39 @@ def _build_response(leave:LeaveRequest)->dict:
         "created_at": leave.created_at,
         "updated_at": leave.updated_at,
         "user_id": leave.user_id,
-        "approval":leave.approval or [],
+        "approvals": leave.approval or [],
         "user_name": leave.user.name if leave.user else None,
         "user_email": leave.user.email if leave.user else None,
         "user_phone": leave.user.phone if leave.user else None,
         "medical_status": leave.medical_certificate.status if leave.medical_certificate else None,
     }
-            
+
+
 def decide_leave_request(
-        db:Session,
-        leave_id:int,
-        supervisor_id:int,
-        schema:LeaveApprovalCreate,
-)-> dict:
-    leave=leave_request_repo.get_leave_request_by_id(db, leave_id)
+        db: Session,
+        leave_id: int,
+        supervisor_id: int,
+        schema: LeaveApprovalCreate,
+) -> dict:
+    leave = leave_request_repo.get_leave_request_by_id(db, leave_id)
     if not leave:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leave request not found.")
+
     if leave.supervisor_id != supervisor_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not the assigned supervisor for this leave request.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                             detail="You are not the assigned supervisor for this leave request.")
+
     if leave.status != "Pending":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only pending leave requests can be approved or rejected.")
-    existing=leave_approval_repo.get_approval_by_leave_request_id(db, leave_id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                             detail="Only pending leave requests can be approved or rejected.")
+
+    existing = leave_approval_repo.get_approval_by_leave_request_id(db, leave_id)
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This leave request has already been decided.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                             detail="This leave request has already been decided.")
+
     # Create approval record
-    old_status=leave.status
+    old_status = leave.status
     leave_approval_repo.create_approval(db, {
         "leave_request_id": leave_id,
         "supervisor_id":    supervisor_id,
@@ -111,14 +127,31 @@ def decide_leave_request(
         "comments":          schema.comments,
     })
 
-    new_status=schema.decision
+    new_status = schema.decision
     leave_request_repo.update_leave_request(
         db,
         leave_id,
         {"status": new_status}
     )
+
     if schema.decision == "Approved" and leave.leave_type == "Sick Leave":
         _create_medical_certificate(db, leave)
+
+    # ── CRITICAL FIX ─────────────────────────────────────────────
+    # "leave" above was fetched BEFORE the status update and BEFORE
+    # the medical certificate row was created. SQLAlchemy does NOT
+    # automatically sync an already-loaded object's attributes or
+    # relationships just because new rows were written to the DB
+    # in between — without re-fetching here, every field below
+    # (status, medical_certificate, etc.) would reflect the OLD
+    # state from step 1, not what was just written.
+    #
+    # This single line is what was missing and caused:
+    #   - medical_status showing wrong/impossible values
+    #   - status appearing stale right after approval
+    #   - the notification/email text below using outdated info
+    leave = leave_request_repo.get_leave_request_by_id(db, leave_id)
+
     _write_audit_log(
         db,
         user_id          = supervisor_id,
@@ -130,6 +163,7 @@ def decide_leave_request(
             "comments": schema.comments,
         },
     )
+
     if schema.decision == "Approved":
         title   = "Leave Request Approved ✅"
         message = (
@@ -150,13 +184,16 @@ def decide_leave_request(
             + (f" Reason: {schema.comments}" if schema.comments else "")
         )
         notif_type = "leave_rejected"
-    _create_notification(db, 
-                         user_id=leave.user_id,
+
+    _create_notification(db,
+                          user_id=leave.user_id,
                          leave_request_id=leave.id,
                          notif_type=notif_type,
                          title=title,
                          message=message)
+
     return _build_response(leave)
+
 
 def get_pending_for_supervisor(
     db:            Session,
@@ -168,8 +205,9 @@ def get_pending_for_supervisor(
     """
     leaves = leave_request_repo.get_leave_requests_for_supervisor(db, supervisor_id)
     pending = [l for l in leaves if l.status == "Pending"]
-    return [_build_response(l) for l in pending]    
- 
+    return [_build_response(l) for l in pending]
+
+
 # ──────────────────────────────────────────────────────────────
 # NOTE: Add these imports at the TOP of leave_approval_service.py
 # and replace the notification section in decide_leave_request

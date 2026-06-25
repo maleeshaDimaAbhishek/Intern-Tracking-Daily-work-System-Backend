@@ -35,7 +35,7 @@ def get_leave_requests_by_user(db:Session, user_id:int)->list[LeaveRequest]:
             joinedload(LeaveRequest.approval).joinedload(LeaveApproval.supervisor), #
             joinedload(LeaveRequest.medical_certificate) # Load medical certificate details
         )
-        .filter(LeaveRequest.user_id==user_id)
+        .filter(LeaveRequest.user_id==user_id,LeaveRequest.status !="Cancelled")
         .order_by(LeaveRequest.created_at.desc())
         .all()
     )
