@@ -1,3 +1,4 @@
+from sqlalchemy import schema
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime, timezone, timedelta
@@ -8,6 +9,7 @@ from app.model.leave_request import LeaveRequest
 from app.model.audit_log import AuditLog
 from app.model.notification import Notification
 from app.model.medical_certificate import MedicalCertificate
+from app.core.leave_email_service import (send_leave_approved_email,send_leave_rejected_email,)
 
 
 def _write_audit_log(
@@ -184,7 +186,25 @@ def decide_leave_request(
             + (f" Reason: {schema.comments}" if schema.comments else "")
         )
         notif_type = "leave_rejected"
-
+    try:
+        if schema.decision == "Approved":
+            send_leave_approved_email(
+                employee_email  = leave.user.email,
+                employee_name   = leave.user.name,
+                supervisor_name = leave.supervisor.name,
+                leave           = leave,
+            )
+        else:
+            send_leave_rejected_email(
+                employee_email  = leave.user.email,
+                employee_name   = leave.user.name,
+                supervisor_name = leave.supervisor.name,
+                leave           = leave,
+                comments        = schema.comments,
+            )
+    except Exception as e:
+        # Never let email failure break the approval flow
+        print(f"Email send failed: {e}")    
     _create_notification(db,
                           user_id=leave.user_id,
                          leave_request_id=leave.id,
@@ -208,34 +228,5 @@ def get_pending_for_supervisor(
     return [_build_response(l) for l in pending]
 
 
-# ──────────────────────────────────────────────────────────────
-# NOTE: Add these imports at the TOP of leave_approval_service.py
-# and replace the notification section in decide_leave_request
-# ──────────────────────────────────────────────────────────────
-#
-# from app.core.leave_email_service import (
-#     send_leave_approved_email,
-#     send_leave_rejected_email,
-# )
-#
-# Then after _create_notification() call, add:
-#
-# try:
-#     if schema.decision == "Approved":
-#         send_leave_approved_email(
-#             employee_email  = leave.user.email,
-#             employee_name   = leave.user.name,
-#             supervisor_name = leave.supervisor.name,
-#             leave           = leave,
-#         )
-#     else:
-#         send_leave_rejected_email(
-#             employee_email  = leave.user.email,
-#             employee_name   = leave.user.name,
-#             supervisor_name = leave.supervisor.name,
-#             leave           = leave,
-#             comments        = schema.comments,
-#         )
-# except Exception as e:
-#     # Never let email failure break the approval flow
-#     print(f"Email send failed: {e}")
+
+

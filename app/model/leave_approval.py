@@ -10,7 +10,7 @@ class LeaveApproval(Base):
     leave_request_id = Column(Integer, ForeignKey("leave_requests.id"), nullable=False)
     supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     decision = Column(String, nullable=False)
-    comments = Column(Text, nullable=True)
+    comments = Column(Text, nullable=False)
     decided_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     leave_request = relationship("LeaveRequest", back_populates="approval")

@@ -55,6 +55,7 @@ class SupervisorBasic(BaseModel):
      id:    int
      name:  str
      email: str
+     comments: Optional[str]= None
  
      class Config:
         from_attributes = True          
@@ -79,6 +80,7 @@ class LeaveRequestResponse(BaseModel):
     reason:            str
     emergency_contact: str
     reference:  str
+    comments:  Optional[str] = None
  
     # Date fields — nullable depending on leave type
     start_date: Optional[date] = None
@@ -106,11 +108,14 @@ class LeaveRequestResponse(BaseModel):
         from_attributes = True
 class LeaveRequestSummary(BaseModel):
     """
-    Lighter version for list views — no nested approval details.
+    Lighter version for list views — no nested approval details,
+    but includes the leave reason for supervisor review.
     """
     id:               int
     leave_type:       str
     status:           str
+    reason:           str
+    comments:         Optional[str] = None
     reference: str
     created_at:       datetime
  

@@ -6,7 +6,7 @@ from app.model.leave_approval import APPROVAL_DECISIONS
 class LeaveApprovalCreate(BaseModel):
     """Leave approval creation schema."""
     decision:str
-    comments: Optional[str] = None
+    comments: str
 
     @field_validator("decision")
     def validate_decision(cls,v):
@@ -27,7 +27,7 @@ class LeaveApprovalCreate(BaseModel):
         supervisor_id:int
         supervisor_name:Optional[str] = None
         decision:str
-        comments: Optional[str] = None
+        comments: str
         decision_date: datetime
 
         class Config:

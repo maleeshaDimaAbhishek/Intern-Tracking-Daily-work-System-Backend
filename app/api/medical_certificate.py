@@ -33,4 +33,4 @@ def get_medical_certificate_status(
     db: Session = Depends(get_db),
     current_user: dict    = Depends(get_current_user),
 ):
-    return medical_certificate_service.get_medical_certificate_status(db, leave_id, int(current_user("sub")),current_user.get("role"))
+    return medical_certificate_service.get_medical_certificate_status(db, leave_id, int(current_user["sub"]),current_user.get("role"))
