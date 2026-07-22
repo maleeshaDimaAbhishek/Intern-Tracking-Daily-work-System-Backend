@@ -75,7 +75,7 @@ def _get_leave_period_text(leave:LeaveRequest)->str:
     return "-"
 
 def generate_approval_letter_pdf(leave:LeaveRequest,
-                                 base_verification_url:str="http://localhost:5173/verify")->io.BytesIO:
+                                 base_verification_url:str="http://157.245.195.23:3001/verify")->io.BytesIO:
     """
     Builds the full Leave Approval Letter PDF in memory and
     returns it as a BytesIO buffer ready to stream to the client.

@@ -4,21 +4,27 @@ from sqlalchemy.exc import IntegrityError
 from app.repository import project_repo
 
 
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException, status
+import logging 
+
 def create_project(db, project_data):
+
     existing = project_repo.get_project_by_name(db, project_data.name)
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Project name already exists",
         )
-
     try:
         return project_repo.create_project(db, project_data.dict())
-    except IntegrityError:
+    except IntegrityError as e:
         db.rollback()
+        logging.error(f"Database Integrity Error: {str(e)}")
+    
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Project name already exists",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Failed to create project. Please check if the assigned Supervisor exists or if required fields are missing.",
         )
 
 

@@ -13,6 +13,7 @@ def register_user(db:Session,user,project_ids:list[int]=[]):
     hashed_pw=hash_password(user.password)
     new_user={
         "name":user.name,
+        "phone":user.phone,
         "email":user.email,
         "password":hashed_pw,
         "role": user.role,
@@ -21,7 +22,7 @@ def register_user(db:Session,user,project_ids:list[int]=[]):
     }
     created=user_repo.create_user(db,new_user)
     if project_ids:
-        user_repo.assign_projects(db,created.id,user.project_ids)
+        user_repo.assign_projects(db,created.id,project_ids)
     # Send welcome email
     try:
         send_welcome_email(to_email=user.email, name=user.name, password=plain_password, role=user.role)

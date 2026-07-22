@@ -25,7 +25,7 @@ class ProjectResponse(BaseModel):
     status: str
     supervisor_id: Optional[int] = None
     supervisor_name: Optional[str] = None
-    created_at: datetime
+    created_at: datetime | str | None = None
 
     class Config:
         from_attributes = True
