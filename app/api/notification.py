@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
  
 from app.schemas.notification import (
+    NotificationResponse,
     NotificationListResponse,
     MarkReadRequest,
 )
@@ -24,3 +25,11 @@ def mark_notifications_as_read(
     user_id:int=Depends(get_current_user_id)
 )->dict:
     return notification_service.mark_notifications_as_read(db,user_id,body)
+
+@router.patch("/{notification_id}/read",response_model=NotificationResponse,summary="Mark one notification as read")
+def mark_notification_as_read(
+    notification_id:int,
+    db:Session=Depends(get_db),
+    user_id:int=Depends(get_current_user_id)
+)->NotificationResponse:
+    return notification_service.mark_notification_as_read(db,user_id,notification_id)

@@ -118,11 +118,12 @@ def send_leave_approved_email(
     employee_name:   str,
     supervisor_name: str,
     leave: dict,
+    medical_certificate_required: bool = False,
 ) -> None:
     subject = f"✅ Your {leave.get('leave_type')} Request Has Been Approved"
 
     medical_note = ""
-    if leave.get("leave_type") == "Sick Leave":
+    if medical_certificate_required:
         medical_note = """
         <div style="background:#fffbeb;border:1px solid #fcd34d;
                     border-radius:8px;padding:0.9rem 1rem;margin-top:1rem;">

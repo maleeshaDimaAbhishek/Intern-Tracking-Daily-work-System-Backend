@@ -1,6 +1,7 @@
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, field_validator, model_validator, Field
 from typing import Optional
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from app.model.leave_request import LEAVE_TYPES, LEAVE_STATUSES
 
 class LeaveRequestCreate(BaseModel):
@@ -30,12 +31,28 @@ class LeaveRequestCreate(BaseModel):
         if value and value not in ['Morning', 'Afternoon']:
             raise ValueError("Session must be either 'Morning' or 'Afternoon'")
         return value
+    @field_validator('start_date', 'end_date', 'leave_date')
+    def validate_not_in_past(cls, value):
+        if value is not None and value < date.today():
+            raise ValueError("Leave dates cannot be earlier than today")
+        return value
     @field_validator('end_date')
     def validate_dates(cls, end_date, values):
         start_date = values.data.get('start_date')
         if start_date and end_date and end_date < start_date:
             raise ValueError("End date cannot be before start date")
         return end_date
+    @model_validator(mode='after')
+    def validate_same_day_morning_cutoff(self):
+        now = datetime.now(ZoneInfo("Asia/Colombo"))
+        if (
+            self.leave_type == "Half-Day Leave"
+            and self.leave_date == now.date()
+            and self.session == "Morning"
+            and now.hour >= 12
+        ):
+            raise ValueError("Morning half-day leave is unavailable after 12:00 PM")
+        return self
     class Config:
         json_schema_extra = {
             "example": {
@@ -133,5 +150,3 @@ class LeaveRequestSummary(BaseModel):
  
     class Config:
         from_attributes = True
-
-

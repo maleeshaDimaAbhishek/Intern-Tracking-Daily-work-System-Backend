@@ -6,6 +6,13 @@ from app.repository import leave_request_repo
 from app.schemas.leave_request import LeaveRequestCreate
 from app.model.leave_request import LeaveRequest, LEAVE_TYPES
 from app.model.user import User
+from app.services.leave_policy import get_leave_period
+
+
+OVERLAPPING_LEAVE_MESSAGE = (
+     "A leave request has already been submitted for the selected date range. "
+     "Please review your existing request before applying again."
+)
 
 def _build_leave_data(schema:LeaveRequestCreate, user_id:int)->dict:
      """Converts the incoming schema into a dict ready for the DB.Also validates that the correct date fields are provided for the chosen leave type."""
@@ -68,6 +75,37 @@ def submit_leave_request(db:Session, user_id:int, schema:LeaveRequestCreate)->di
      if not supervisor:
           raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supervisor not found or inactive.")
      data=_build_leave_data(schema, user_id)
+     requested_start, requested_end = get_leave_period(
+          schema.leave_type,
+          schema.start_date,
+          schema.end_date,
+          schema.leave_date,
+     )
+     overlapping_leave = leave_request_repo.get_overlapping_leave_request(
+          db,
+          user_id,
+          requested_start,
+          requested_end,
+     )
+     if overlapping_leave:
+          existing_start, existing_end = get_leave_period(
+               overlapping_leave.leave_type,
+               overlapping_leave.start_date,
+               overlapping_leave.end_date,
+               overlapping_leave.leave_date,
+          )
+          period = (
+               existing_start.isoformat()
+               if existing_start == existing_end
+               else f"{existing_start.isoformat()} to {existing_end.isoformat()}"
+          )
+          raise HTTPException(
+               status_code=status.HTTP_409_CONFLICT,
+               detail=(
+                    f"{OVERLAPPING_LEAVE_MESSAGE} "
+                    f"Existing request: {overlapping_leave.reference} ({period})."
+               ),
+          )
      leave=leave_request_repo.create_leave_request(db, data)
      # Reload with relationships for response
      leave = leave_request_repo.get_leave_request_by_id(db, leave.id)

@@ -8,6 +8,7 @@ from app.repository import leave_request_repo
 from app.model.medical_certificate import MedicalCertificate
 from app.model.notification import Notification
 from app.model.audit_log import AuditLog
+from app.services.leave_policy import requires_medical_certificate
 
 # ── Where uploaded files are stored ───────────────────────────
 UPLOAD_DIR = "uploads/medical_certificates"
@@ -50,11 +51,15 @@ async def upload_medical_certificate(
             detail="You can only upload certificates for your own leave requests.",
         )
 
-    # ── 3. Only Sick Leave needs a medical certificate ─────────
-    if leave.leave_type != "Sick Leave":
+    # ── 3. Only Sick Leave longer than two days needs a certificate
+    if not requires_medical_certificate(
+        leave.leave_type,
+        leave.start_date,
+        leave.end_date,
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Medical certificates are only required for Sick Leave.",
+            detail="Medical certificates are only required for Sick Leave exceeding two days.",
         )
 
     # ── 4. Leave must be approved ─────────────────────────────

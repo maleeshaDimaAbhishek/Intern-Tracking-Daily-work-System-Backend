@@ -18,6 +18,13 @@ def mark_notifications_as_read(db:Session,user_id:int,body:MarkReadRequest)->dic
     if not body.notification_ids:
         return{"Updated": notification_repo.mark_all_as_read(db,user_id),"message":"All notifications marked as read"}
     return {"Updated": notification_repo.mark_specific_as_read(db,user_id,body.notification_ids),"message":f"{len(body.notification_ids)} notifications marked as read"}
+
+def mark_notification_as_read(db:Session,user_id:int,notification_id:int)->NotificationResponse:
+    notification = notification_repo.mark_as_read(db,user_id,notification_id)
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notification
+
 def create_notification(
         db:Session,
         user_id:int,

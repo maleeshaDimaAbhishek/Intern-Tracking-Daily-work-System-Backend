@@ -1,3 +1,6 @@
+from datetime import date
+
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 from app.model.leave_request import LeaveRequest
 from app.model.leave_approval import LeaveApproval
@@ -39,6 +42,70 @@ def get_leave_requests_by_user(db:Session, user_id:int)->list[LeaveRequest]:
         .order_by(LeaveRequest.created_at.desc())
         .all()
     )
+
+
+def get_overlapping_leave_request(
+    db: Session,
+    user_id: int,
+    requested_start: date,
+    requested_end: date,
+) -> LeaveRequest | None:
+    """Find a non-cancelled request whose inclusive period intersects the requested period."""
+    range_overlap = and_(
+        LeaveRequest.leave_type.in_(("Sick Leave", "Personal Leave")),
+        LeaveRequest.start_date <= requested_end,
+        LeaveRequest.end_date >= requested_start,
+    )
+    single_day_overlap = and_(
+        LeaveRequest.leave_type.in_(("Emergency Leave", "Half-Day Leave")),
+        LeaveRequest.leave_date >= requested_start,
+        LeaveRequest.leave_date <= requested_end,
+    )
+
+    return (
+        db.query(LeaveRequest)
+        .filter(
+            LeaveRequest.user_id == user_id,
+            LeaveRequest.status != "Cancelled",
+            or_(range_overlap, single_day_overlap),
+        )
+        .order_by(LeaveRequest.created_at.desc())
+        .first()
+    )
+
+
+def get_expired_pending_leave_requests(
+    db: Session,
+    current_date: date,
+) -> list[LeaveRequest]:
+    """Return pending requests whose final applicable leave date has passed."""
+    expired_range_leave = and_(
+        LeaveRequest.leave_type.in_(("Sick Leave", "Personal Leave")),
+        LeaveRequest.end_date < current_date,
+    )
+    expired_single_day_leave = and_(
+        LeaveRequest.leave_type.in_(("Emergency Leave", "Half-Day Leave")),
+        LeaveRequest.leave_date < current_date,
+    )
+
+    return (
+        db.query(LeaveRequest)
+        .filter(
+            LeaveRequest.status == "Pending",
+            or_(expired_range_leave, expired_single_day_leave),
+        )
+        .all()
+    )
+
+
+def delete_leave_requests(db: Session, leaves: list[LeaveRequest]) -> int:
+    """Delete loaded leave requests and their ORM-cascaded related records."""
+    for leave in leaves:
+        db.delete(leave)
+    db.commit()
+    return len(leaves)
+
+
 def get_leave_requests_for_supervisor(db:Session, supervisor_id:int)->list[LeaveRequest]:
     return (
         db.query(LeaveRequest)

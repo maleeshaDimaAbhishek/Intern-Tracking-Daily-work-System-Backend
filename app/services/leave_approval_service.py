@@ -10,6 +10,7 @@ from app.model.audit_log import AuditLog
 from app.model.notification import Notification
 from app.model.medical_certificate import MedicalCertificate
 from app.core.leave_email_service import (send_leave_approved_email,send_leave_rejected_email,)
+from app.services.leave_policy import requires_medical_certificate
 
 
 def _write_audit_log(
@@ -136,7 +137,13 @@ def decide_leave_request(
         {"status": new_status}
     )
 
-    if schema.decision == "Approved" and leave.leave_type == "Sick Leave":
+    certificate_required = requires_medical_certificate(
+        leave.leave_type,
+        leave.start_date,
+        leave.end_date,
+    )
+
+    if schema.decision == "Approved" and certificate_required:
         _create_medical_certificate(db, leave)
 
     # ── CRITICAL FIX ─────────────────────────────────────────────
@@ -174,7 +181,7 @@ def decide_leave_request(
             + (f" by your supervisor." )
             + (
                 " Please submit your medical certificate within 14 days."
-                if leave.leave_type == "Sick Leave" else ""
+                if certificate_required else ""
             )
         )
         notif_type = "leave_approved"
@@ -193,6 +200,7 @@ def decide_leave_request(
                 employee_name   = leave.user.name,
                 supervisor_name = leave.supervisor.name,
                 leave           = leave,
+                medical_certificate_required = certificate_required,
             )
         else:
             send_leave_rejected_email(
@@ -226,7 +234,5 @@ def get_pending_for_supervisor(
     leaves = leave_request_repo.get_leave_requests_for_supervisor(db, supervisor_id)
     pending = [l for l in leaves if l.status == "Pending"]
     return [_build_response(l) for l in pending]
-
-
 
 

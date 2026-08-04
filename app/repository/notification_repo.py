@@ -8,13 +8,19 @@ def create_notitfication(db:Session,data:dict)->Notification:
     db.refresh(notification)
     return notification
 def get_notifications_by_user(db:Session,user_id:int)->list[Notification]:
-    return db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
+    return db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.is_read == False,
+    ).order_by(Notification.created_at.desc()).all()
 def get_unread_count(db:Session,user_id:int)->int:
     return db.query(Notification).filter(Notification.user_id == user_id,Notification.is_read == False).count()
 def get_notification_by_id(db:Session,notification_id:int)->Notification:
     return db.query(Notification).filter(Notification.id == notification_id).first()
-def mark_as_read(db:Session,notification_id:int)->Notification:
-    notification = get_notification_by_id(db,notification_id)
+def mark_as_read(db:Session,user_id:int,notification_id:int)->Notification | None:
+    notification = db.query(Notification).filter(
+        Notification.id == notification_id,
+        Notification.user_id == user_id,
+    ).first()
     if notification:
         notification.is_read = True
         db.commit()

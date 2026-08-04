@@ -96,7 +96,10 @@ def get_user_projects(
     supervisor_id=auth_user.get("sub")
     if role=="supervisor" :
         user_service.is_supervisor_of_intern(db, supervisor_id, user_id)
-    return project_service.get_projects_by_user(db,user_id,role)    
+    # This endpoint describes the target user's assignments. The requester's
+    # role must not change the query: a supervisor editing an intern needs the
+    # intern's assigned projects, not projects supervised by that intern.
+    return project_service.get_assigned_projects_for_user(db, user_id)
 @router.delete("/{user_id}")
 def soft_delete_user(
     user_id:int,

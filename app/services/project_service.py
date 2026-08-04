@@ -40,6 +40,11 @@ def get_projects_by_user(db, user_id: int, role: str):
     return project_repo.get_projects_by_user_or_supervisor(db, user_id, role)
 
 
+def get_assigned_projects_for_user(db, user_id: int):
+    """Return projects assigned to a user, independent of the requester's role."""
+    return project_repo.get_project_by_user(db, user_id)
+
+
 def update_project(db, project_id: int, project_data):
     existing = project_repo.get_project_by_name(db, project_data.name)
     if existing and existing.id != project_id:
