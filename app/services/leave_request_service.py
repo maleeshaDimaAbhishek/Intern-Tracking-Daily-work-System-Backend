@@ -13,6 +13,10 @@ OVERLAPPING_LEAVE_MESSAGE = (
      "A leave request has already been submitted for the selected date range. "
      "Please review your existing request before applying again."
 )
+PENDING_LEAVE_MESSAGE = (
+     "You already have a pending leave request. "
+     "Please wait for it to be reviewed or cancel it before applying again."
+)
 
 def _build_leave_data(schema:LeaveRequestCreate, user_id:int)->dict:
      """Converts the incoming schema into a dict ready for the DB.Also validates that the correct date fields are provided for the chosen leave type."""
@@ -75,6 +79,12 @@ def submit_leave_request(db:Session, user_id:int, schema:LeaveRequestCreate)->di
      if not supervisor:
           raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supervisor not found or inactive.")
      data=_build_leave_data(schema, user_id)
+     pending_leave = leave_request_repo.get_pending_leave_request(db, user_id)
+     if pending_leave:
+          raise HTTPException(
+               status_code=status.HTTP_409_CONFLICT,
+               detail=f"{PENDING_LEAVE_MESSAGE} Existing request: {pending_leave.reference}.",
+          )
      requested_start, requested_end = get_leave_period(
           schema.leave_type,
           schema.start_date,

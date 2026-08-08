@@ -44,6 +44,19 @@ def get_leave_requests_by_user(db:Session, user_id:int)->list[LeaveRequest]:
     )
 
 
+def get_pending_leave_request(db: Session, user_id: int) -> LeaveRequest | None:
+    """Return the user's most recently submitted pending leave request, if any."""
+    return (
+        db.query(LeaveRequest)
+        .filter(
+            LeaveRequest.user_id == user_id,
+            LeaveRequest.status == "Pending",
+        )
+        .order_by(LeaveRequest.created_at.desc())
+        .first()
+    )
+
+
 def get_overlapping_leave_request(
     db: Session,
     user_id: int,

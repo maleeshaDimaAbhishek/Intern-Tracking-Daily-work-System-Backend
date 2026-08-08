@@ -37,6 +37,7 @@ app = FastAPI(title="EmpDiary API", version="2.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://empdiary.raccoon-ai.io",
         "http://157.245.195.23:3001",
         "http://localhost:5173",
         "http://localhost:3001"
